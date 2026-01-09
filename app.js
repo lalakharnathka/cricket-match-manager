@@ -633,3 +633,55 @@ function getPlayerHistory(playerId, callback) {
   };
 }
 
+function editPlayer(playerId) {
+  const tx = db.transaction("players", "readonly");
+  const store = tx.objectStore("players");
+
+  store.get(playerId).onsuccess = (e) => {
+    const pl = e.target.result;
+    if (!pl) {
+      alert("Player not found");
+      return;
+    }
+
+    content.innerHTML = `
+      <h2>Edit Player</h2>
+
+      <input id="editName" placeholder="Player Name" value="${pl.name || ""}" /><br><br>
+      <input id="editPhone" placeholder="WhatsApp Number (91XXXXXXXXXX)" value="${pl.phone || ""}" /><br><br>
+
+      <button onclick="savePlayerEdit(${pl.id})">💾 Save</button>
+      <button onclick="renderPlayerList()">Cancel</button>
+    `;
+  };
+}
+
+function savePlayerEdit(playerId) {
+  const name = document.getElementById("editName").value.trim();
+  const phone = document.getElementById("editPhone").value.trim();
+
+  if (!name || !phone) {
+    alert("Enter name and phone");
+    return;
+  }
+
+  const tx = db.transaction("players", "readwrite");
+  const store = tx.objectStore("players");
+
+  // keep existing createdAt if present
+  store.get(playerId).onsuccess = (e) => {
+    const existing = e.target.result;
+
+    store.put({
+      id: playerId,
+      name,
+      phone,
+      createdAt: existing?.createdAt || new Date(),
+      updatedAt: new Date()
+    });
+
+    tx.oncomplete = () => {
+      renderPlayerList();
+    };
+  };
+}
